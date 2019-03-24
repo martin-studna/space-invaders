@@ -1,0 +1,15 @@
+﻿cl : Command line warning D9035: option 'Gm' has been deprecated and will be removed in a future release
+  main.cpp
+d:\plocha\zadani\space invaders\main.cpp(37): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(80): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(83): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(86): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(125): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(124): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(128): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(128): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(135): warning C4018: '<': signed/unsigned mismatch
+d:\plocha\zadani\space invaders\main.cpp(138): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(138): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+d:\plocha\zadani\space invaders\main.cpp(164): warning C4018: '<': signed/unsigned mismatch
+  leet.vcxproj -> D:\Plocha\zadani\space invaders\Debug\leet.exe
