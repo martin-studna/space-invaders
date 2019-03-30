@@ -14,6 +14,7 @@
     <ProjectGuid>{5917092B-72EA-42E6-8E41-FF366F3AB837}</ProjectGuid>
     <RootNamespace>leet</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
