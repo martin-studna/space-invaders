@@ -17,23 +17,25 @@ typedef void* sprite;
 struct enemy
 {
 	float x, y;
+	float xSize, ySize;
 	float xo, yo;
 	sprite sprite;
 
 	enemy()
 	{
-		x = y = xo = yo = 0;
+		x = y = xo = yo = xSize = ySize = 0;
 		sprite = LoadSprite("gfx/Little Invader.png");
 	}
 };
 
 struct player
 {
-	int x, y;
+	float x, y, xSize, ySize;
 	sprite sprite;
 
 	player() : x(400), y(550)
 	{
+		xSize = ySize = 50;
 		sprite = LoadSprite("gfx/Big Invader.png");
 	}
 };
@@ -41,11 +43,12 @@ struct player
 
 struct bullet
 {
-	float x, y, a;
+	float x, y, a, xSize, ySize;
 	sprite sprite;
 
 	bullet(int x, int y) : x(x), y(y), a(0)
 	{
+		xSize = ySize = 10;
 		sprite = LoadSprite("gfx/bullet.png");
 	}
 };
@@ -168,17 +171,23 @@ void update()
  */
 void draw()
 {
-	for (int n = 0; n < 50; ++n)
-	{
-		DrawSprite(gameState.enemies->sprite, gameState.enemies[n].x + gameState.enemies[n].xo, gameState.enemies[n].y + gameState.enemies[n].yo,
-			(10 + ((n) % 17)), (10 + ((n) % 17)), 0, white);
+	for (auto& enemy : gameState.enemies)
+	{		
+		DrawSprite(gameState.enemies->sprite, enemy.x + enemy.xo, enemy.y + enemy.yo,
+		           enemy.xSize, enemy.ySize, 0, white);
 	}
 
-	DrawSprite(gameState.player.sprite, gameState.player.x, gameState.player.y, 50, 50, PI + sin(gameState.time*0.1)*0.1, white);
+	DrawSprite(gameState.player.sprite,
+		gameState.player.x,
+		gameState.player.y,
+		gameState.player.xSize,
+		gameState.player.ySize,
+		PI + sin(gameState.time*0.1)*0.1,
+		white);
 
 	for (auto& bullet : gameState.bullets)
 	{
-		DrawSprite(bullet.sprite, bullet.x, bullet.y, 10, 10, bullet.a, white);
+		DrawSprite(bullet.sprite, bullet.x, bullet.y, bullet.xSize, bullet.ySize, bullet.a, white);
 	}
 
 	for (int n = 0; n < strlen("space invaders"); ++n)
@@ -214,6 +223,8 @@ void setup()
 		gameState.enemies[n] = enemy();
 		gameState.enemies[n].x = (n % 10) * 60 + 120;
 		gameState.enemies[n].y = (n / 10) * 60 + 70;
+		gameState.enemies[n].xSize = 10 + n % 17;
+		gameState.enemies[n].ySize = 10 + n % 17;
 	}
 }
 
