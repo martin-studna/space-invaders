@@ -93,14 +93,14 @@ void updateEnemiesMovements()
 		int n1 = gameState.time + myPow(n, 2) + myPow(n, 3);
 		int n2 = gameState.time + n + myPow(n, 2) + myPow(n, 3) * 3;
 
-		if (((n1 / 128) % 8) == 7)
+		if ((n1 / 128) % 8 == 7)
 		{
-			gameState.enemies[n].xo += (1 - cos((n1 % 128) / 64.0f*2.f*PI))*(20 + (myPow(n,2) % 9));
-			gameState.enemies[n].yo += (sin((n1 % 128) / 64.0f*2.f*PI))*(20 + (myPow(n, 2) % 9));
+			gameState.enemies[n].xo += (1 - cos(n1 % 128 / 64.0f*2.f*PI))*(20 + myPow(n, 2) % 9);
+			gameState.enemies[n].yo += sin(n1 % 128 / 64.0f*2.f*PI)*(20 + myPow(n, 2) % 9);
 		}
 
-		if (((n2 / 256) % 16) == 15)
-			gameState.enemies[n].yo += (1 - cos((n2 % 256) / 256.0f*2.f*PI))*(150 + (myPow(n, 2) % 9));
+		if ((n2 / 256) % 16 == 15)
+			gameState.enemies[n].yo += (1 - cos(n2 % 256 / 256.0f*2.f*PI))*(150 + myPow(n, 2) % 9);
 	}
 }
 
