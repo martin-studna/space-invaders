@@ -1,16 +1,16 @@
 #include "lib/leetlib.h"
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <string>
 
 /**
 		main.cpp
-		Purpose: Refactor source code of Space Invaders project, add collisions, write score and make it better!
+		Purpose: Refactor source code of Space Invaders project, add collision detection, write score and make it better!
 
 		@author Martin Studna
 		@version 1.0 01/03/17
 */
-
 
 typedef void* sprite;
 typedef void* sound;
@@ -38,6 +38,7 @@ struct player
 {
 	float xcentre, ycentre, x2, y2, width, height;
 	float angle;
+	int score;
 	sprite sprite;
 	sound shoot;
 	sound moved;
@@ -45,6 +46,7 @@ struct player
 
 	player() : xcentre(400), ycentre(550)
 	{
+		score = 0;
 		width = height = 50;
 		x2 = xcentre + width;
 		y2 = ycentre + height;
@@ -53,14 +55,13 @@ struct player
 	}
 };
 
-
 struct bullet
 {
 	float xcentre, ycentre, x2, y2, angle, width, height;
 	sprite sprite;
 	RECT rect;
 
-	bullet(int xcentre, int ycentre) : xcentre(xcentre), ycentre(ycentre), angle(0)
+	bullet(const int xcentre, const int ycentre) : xcentre(xcentre), ycentre(ycentre), angle(0)
 	{
 		width = height = 10;
 		x2 = xcentre + width;
@@ -101,6 +102,7 @@ RECT setCurrentRect(float xcentre, float ycentre, float width, float height, flo
 {
 	float c = cosf(angle);
 	float s = sinf(angle);
+
 #define ROTATE_X(xx,yy) (xcentre+(xx)*c+(yy)*s)
 #define ROTATE_Y(xx,yy) (ycentre+(yy)*c-(xx)*s)
 	
@@ -239,6 +241,7 @@ bool checkCollisions()
 				PlaySnd(gameState.enemies[i].killed);
 				removeFrom(gameState.enemies, i);
 				removeFrom(gameState.bullets, j);
+				gameState.player.score++;
 				break;
 			}
 		}
@@ -331,6 +334,7 @@ void setup()
 void Game()
 {
 	setup();
+	std::ofstream outfile("score.txt", std::ios_base::app | std::ios_base::out);
 
 	while (!WantQuit() && !IsKeyDown(VK_ESCAPE))
 	{
@@ -338,4 +342,5 @@ void Game()
 			break;
 		draw();
 	}
+	outfile << "Killed aliens: " << gameState.player.score << " time: " << gameState.time << std::endl;
 }

@@ -130,8 +130,6 @@ void EndTextBatch()
 	}
 }
 
-
-
 int DrawSomeText(int x, int y, int size, int col, bool centered, const char *pFormat, ...)
 {
 	char debugText[8192];
