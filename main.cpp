@@ -2,7 +2,9 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
+#include <d3dx9core.h>
 
 /**
 		main.cpp
@@ -12,8 +14,13 @@
 		@version 1.0 01/03/17
 */
 
+enum mode { Play, Score };
+
+
 typedef void* sprite;
 typedef void* sound;
+
+mode _mode;
 
 struct enemy
 {
@@ -105,7 +112,7 @@ RECT setCurrentRect(float xcentre, float ycentre, float width, float height, flo
 
 #define ROTATE_X(xx,yy) (xcentre+(xx)*c+(yy)*s)
 #define ROTATE_Y(xx,yy) (ycentre+(yy)*c-(xx)*s)
-	
+
 	return RECT
 	{
 		LONG(ROTATE_X(-width, -height)),
@@ -134,7 +141,7 @@ int myPow(int x, int p) {
 }
 
 void updateEnemiesMovements()
-{ 
+{
 	for (int n = 0; n < gameState.enemies.size(); ++n)
 	{
 		gameState.enemies[n].xo = gameState.enemies[n].yo = 0;
@@ -219,6 +226,26 @@ void shoot()
 	}
 }
 
+void writeScore()
+{
+	std::ofstream outfile("score.txt", std::ios_base::app | std::ios_base::out);
+	outfile << "Killed aliens: " << gameState.player.score << " time: " << gameState.time << std::endl;
+	outfile.close();
+}
+
+std::string readScore()
+{
+	std::ifstream infile;
+	infile.open("score.txt"); //open the input file
+
+	std::stringstream strStream;
+	strStream << infile.rdbuf(); //read the file
+	std::string str = strStream.str();
+	infile.close();
+
+	return str;
+}
+
 
 bool checkCollisions()
 {
@@ -230,8 +257,12 @@ bool checkCollisions()
 			StopMusic();
 			PlaySnd(gameState.gameOver);
 			int id = MessageBox(nullptr, "Game Over", "Space Invaders", MB_OK);
-			if (id == 1)
-				return false;
+
+			writeScore();
+
+			MessageBox(nullptr, readScore().c_str(), "Score", MB_OK);
+
+			return false;
 		}
 
 		for (int j = 0; j < gameState.bullets.size(); ++j)
@@ -261,8 +292,18 @@ bool update()
 	updateBulletMovements();
 	shoot();
 
-	if (gameState.enemies.empty() && MessageBox(nullptr, "You saved the humanity against the alien invasion!", "Space Invaders", MB_OK) == 1)
+	if (gameState.enemies.empty())
+	{
+		MessageBox(nullptr, "You saved the humanity against the alien invasion!", "Space Invaders", MB_OK);
+
+		writeScore();
+		
+
+		MessageBox(nullptr, readScore().c_str(), "Score", MB_OK);
+
 		return false;
+	}
+
 
 	return checkCollisions();
 }
@@ -334,7 +375,6 @@ void setup()
 void Game()
 {
 	setup();
-	std::ofstream outfile("score.txt", std::ios_base::app | std::ios_base::out);
 
 	while (!WantQuit() && !IsKeyDown(VK_ESCAPE))
 	{
@@ -342,5 +382,4 @@ void Game()
 			break;
 		draw();
 	}
-	outfile << "Killed aliens: " << gameState.player.score << " time: " << gameState.time << std::endl;
 }

@@ -65,7 +65,7 @@ void ReleaseFonts();
 typedef unsigned int u32;
 
 void StartTextBatch(int size=0);
-//int DrawText(int x, int y, int size, u32 col, bool cenetered, const char *pFormat, ...);
+int DrawText(int x, int y, int size, u32 col, bool centered, const char *pFormat, ...);
 
 
 void EndTextBatch();

@@ -14,6 +14,10 @@ bool WantQuit(DWORD clearcolor=0);
 void Flip(); // flips the screen, frame locked to 60 hz
 void Game(); // you write this :)
 
+int DrawSomeText(int x, int y, int size, int col, bool centered, const char *pFormat, ...);
+void StartTextBatch(int size);
+void EndTextBatch();
+void ReleaseFonts();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // input
 void GetMousePos(float &x, float &y); // 0,0 is top left; 800,600 is bottom right
