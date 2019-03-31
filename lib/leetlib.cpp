@@ -51,7 +51,7 @@ struct CUSTOMVERTEX
 // Our custom FVF, which describes our custom vertex structure
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
-/*
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -155,7 +155,7 @@ int DrawSomeText(int x, int y, int size, int col, bool centered, const char *pFo
 
 }
 
-*/
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -259,7 +259,7 @@ VOID Cleanup()
 // Desc: Draws the scene
 //-----------------------------------------------------------------------------
 
-/*
+
 float RotateU(float u, float v, float a)
 {
 	u=u-0.5;
@@ -751,7 +751,7 @@ void SetCurrentTexture(void *tex )
 	g_pd3dDevice->SetTexture(0,t);
 }
 
-/*
+
 void DrawRectangle(float x1, float y1, float x2, float y2, DWORD col )
 {
 	CUSTOMVERTEX tea2[] =
@@ -764,7 +764,7 @@ void DrawRectangle(float x1, float y1, float x2, float y2, DWORD col )
 	g_pd3dDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, tea2, sizeof(CUSTOMVERTEX));
 
 }
-*/
+
 void DrawSprite(void *sprite, float xcentre, float ycentre, float xsize, float ysize, float angle, DWORD col )
 {
 	SetCurrentTexture(sprite);
@@ -784,7 +784,7 @@ void DrawSprite(void *sprite, float xcentre, float ycentre, float xsize, float y
 	g_pd3dDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, tea2, sizeof(CUSTOMVERTEX));
 }
 
-/*
+
 // 'flat colour' output
 void DrawLine(float x1, float y1, float x2, float y2, DWORD col ) // no texture
 {
@@ -817,7 +817,7 @@ void DrawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, DW
 	g_pd3dDevice->SetTexture(0, oldtex);
 }
 
-
+/*
 // 'advanced' output - for geeks only - for drawing arbitrarily textured triangles and line lists
 void DrawTriangleList(Vertex *verts, int numtris)
 {

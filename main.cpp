@@ -17,16 +17,18 @@ typedef void* sound;
 
 struct enemy
 {
-	float x, y;
+	float xcentre, ycentre;
 	float width, height;
 	float xo, yo;
 	float x2, y2;
 	sprite sprite;
 	sound killed;
+	RECT rect;
 
 	enemy()
 	{
-		x = y = xo = yo = width = height = 0;
+		xcentre = ycentre = xo = yo = width = height = 0;
+		rect = { 0,0,0,0 };
 		sprite = LoadSprite("gfx/Little Invader.png");
 		killed = LoadSnd("sounds/invaderkilled.wav");
 	}
@@ -34,16 +36,18 @@ struct enemy
 
 struct player
 {
-	float x, y, x2, y2, width, height;
+	float xcentre, ycentre, x2, y2, width, height;
+	float angle;
 	sprite sprite;
 	sound shoot;
 	sound moved;
+	RECT rect;
 
-	player() : x(400), y(550)
+	player() : xcentre(400), ycentre(550)
 	{
 		width = height = 50;
-		x2 = x + width;
-		y2 = y + height;
+		x2 = xcentre + width;
+		y2 = ycentre + height;
 		sprite = LoadSprite("gfx/Big Invader.png");
 		shoot = LoadSnd("sounds/shoot.wav");
 	}
@@ -52,14 +56,15 @@ struct player
 
 struct bullet
 {
-	float x, y, x2, y2, a, width, height;
+	float xcentre, ycentre, x2, y2, angle, width, height;
 	sprite sprite;
+	RECT rect;
 
-	bullet(int x, int y) : x(x), y(y), a(0)
+	bullet(int xcentre, int ycentre) : xcentre(xcentre), ycentre(ycentre), angle(0)
 	{
 		width = height = 10;
-		x2 = x + width;
-		y2 = y + height;
+		x2 = xcentre + width;
+		y2 = ycentre + height;
 		sprite = LoadSprite("gfx/bullet.png");
 	}
 };
@@ -69,22 +74,44 @@ struct GameState
 	std::vector<enemy> enemies;
 	std::vector<bullet> bullets;
 	player player;
-	int reload{};
+	int reload;
 	void* Text[14];
 	sound enemyMoved;
 	sound gameOver;
+	RECT windowRect;
 
 	int time;
 
 	GameState() : Text{}
 	{
 		time = reload = 0;
+		GetWindowRect(GetActiveWindow(), &windowRect);
+		gameOver = LoadSnd("sounds/over.wav");
+		reload = 0;
+		enemyMoved = LoadSnd("sounds/fastinvader1.wav");
+		PlayMusic("sounds/music.mp3");
 	}
 };
 
 const DWORD white = 0xffffffff;
 
 GameState gameState;
+
+RECT setCurrentRect(float xcentre, float ycentre, float width, float height, float angle)
+{
+	float c = cosf(angle);
+	float s = sinf(angle);
+#define ROTATE_X(xx,yy) (xcentre+(xx)*c+(yy)*s)
+#define ROTATE_Y(xx,yy) (ycentre+(yy)*c-(xx)*s)
+	
+	return RECT
+	{
+		LONG(ROTATE_X(-width, -height)),
+		LONG(ROTATE_Y(-width, -height)),
+		LONG(ROTATE_X(width, height)),
+		LONG(ROTATE_Y(width, height)),
+	};
+}
 
 template<class T>
 void removeFrom(std::vector<T>& list, int i)
@@ -105,7 +132,7 @@ int myPow(int x, int p) {
 }
 
 void updateEnemiesMovements()
-{
+{ 
 	for (int n = 0; n < gameState.enemies.size(); ++n)
 	{
 		gameState.enemies[n].xo = gameState.enemies[n].yo = 0;
@@ -123,9 +150,16 @@ void updateEnemiesMovements()
 
 		if (gameState.time > 600 && gameState.time % 600 < 50)
 		{
-			gameState.enemies[n].y += 1;
+			gameState.enemies[n].ycentre += 1;
 			PlaySnd(gameState.enemyMoved);
 		}
+
+		gameState.enemies[n].rect = setCurrentRect(
+			gameState.enemies[n].xcentre + gameState.enemies[n].xo,
+			gameState.enemies[n].ycentre + gameState.enemies[n].yo,
+			gameState.enemies[n].width,
+			gameState.enemies[n].height,
+			0);
 	}
 }
 
@@ -133,24 +167,41 @@ void updateBulletMovements()
 {
 	for (auto& bullet : gameState.bullets)
 	{
-		bullet.y -= 4;
-		bullet.a += 0.1f;
+		bullet.ycentre -= 4;
+		bullet.angle += 0.1f;
+
+		bullet.rect = setCurrentRect(
+			bullet.xcentre,
+			bullet.ycentre,
+			bullet.width,
+			bullet.height,
+			0);
+
+		int i = 0;
 	}
 }
 
 void updatePlayerMovements()
 {
-	if (IsKeyDown(VK_LEFT))
+	if (IsKeyDown(VK_LEFT) && gameState.player.rect.left > 0)
 	{
-		gameState.player.x -= 7;
-		gameState.player.x2 = gameState.player.x + gameState.player.width;
+		gameState.player.xcentre -= 7;
 	}
 
-	if (IsKeyDown(VK_RIGHT))
+	if (IsKeyDown(VK_RIGHT) && gameState.player.rect.right < gameState.windowRect.right)
 	{
-		gameState.player.x += 7;
-		gameState.player.x2 = gameState.player.x + gameState.player.width;
+		gameState.player.xcentre += 7;
 	}
+
+	gameState.player.angle = PI + sin(gameState.time*0.1)*0.1;
+
+	gameState.player.rect = setCurrentRect(
+		gameState.player.xcentre,
+		gameState.player.ycentre,
+		gameState.player.width,
+		gameState.player.height,
+		0);
+
 }
 
 void shoot()
@@ -160,37 +211,10 @@ void shoot()
 
 	if (IsKeyDown(VK_SPACE) && gameState.reload == 0)
 	{
-		gameState.bullets.emplace_back(gameState.player.x, gameState.player.y);
+		gameState.bullets.emplace_back(gameState.player.xcentre, gameState.player.ycentre);
 		PlaySnd(gameState.player.shoot);
 		gameState.reload = 15;
 	}
-}
-
-bool valueInRange(float value, float min, float max)
-{
-	return (value >= min) && (value <= max);
-}
-
-bool overlap(enemy e, bullet b)
-{
-	bool xOverlap = valueInRange(e.x + e.xo, b.x, b.x2) ||
-		valueInRange(b.x, e.x + e.xo, e.x2 + e.xo);
-
-	bool yOverlap = valueInRange(e.y + e.yo, b.y, b.y2) ||
-		valueInRange(b.y, e.y + e.yo, e.y2 + e.yo);
-
-	return xOverlap && yOverlap;
-}
-
-bool overlap(player p, enemy e)
-{
-	bool xOverlap = valueInRange(p.x, e.x + e.xo, e.x2 + e.xo) ||
-		valueInRange(e.x + e.xo, p.x, p.x2);
-
-	bool yOverlap = valueInRange(p.y, e.y + e.yo, e.y2 + e.yo) ||
-		valueInRange(e.y + e.yo, p.y, p.y2);
-
-	return xOverlap && yOverlap;
 }
 
 
@@ -198,16 +222,19 @@ bool checkCollisions()
 {
 	for (int i = 0; i < gameState.enemies.size(); ++i)
 	{
-		if (overlap(gameState.player, gameState.enemies[i]))
+		RECT inter;
+		if (IntersectRect(&inter, &gameState.enemies[i].rect, &gameState.player.rect))
 		{
-			int id = MessageBox(NULL, "Game Over", "Space Invaders", MB_OK);
+			StopMusic();
+			PlaySnd(gameState.gameOver);
+			int id = MessageBox(nullptr, "Game Over", "Space Invaders", MB_OK);
 			if (id == 1)
 				return false;
 		}
 
 		for (int j = 0; j < gameState.bullets.size(); ++j)
 		{
-			if (overlap(gameState.enemies[i], gameState.bullets[j]))
+			if (IntersectRect(&inter, &gameState.enemies[i].rect, &gameState.bullets[j].rect))
 			{
 				PlaySnd(gameState.enemies[i].killed);
 				removeFrom(gameState.enemies, i);
@@ -231,7 +258,7 @@ bool update()
 	updateBulletMovements();
 	shoot();
 
-	if (gameState.enemies.empty())
+	if (gameState.enemies.empty() && MessageBox(nullptr, "You saved the humanity against the alien invasion!", "Space Invaders", MB_OK) == 1)
 		return false;
 
 	return checkCollisions();
@@ -244,21 +271,21 @@ void draw()
 {
 	for (auto& enemy : gameState.enemies)
 	{
-		DrawSprite(enemy.sprite, enemy.x + enemy.xo, enemy.y + enemy.yo,
+		DrawSprite(enemy.sprite, enemy.xcentre + enemy.xo, enemy.ycentre + enemy.yo,
 			enemy.width, enemy.height, 0, white);
 	}
 
 	DrawSprite(gameState.player.sprite,
-		gameState.player.x,
-		gameState.player.y,
+		gameState.player.xcentre,
+		gameState.player.ycentre,
 		gameState.player.width,
 		gameState.player.height,
-		PI + sin(gameState.time*0.1)*0.1,
+		gameState.player.angle,
 		white);
 
 	for (auto& bullet : gameState.bullets)
 	{
-		DrawSprite(bullet.sprite, bullet.x, bullet.y, bullet.width, bullet.height, bullet.a, white);
+		DrawSprite(bullet.sprite, bullet.xcentre, bullet.ycentre, bullet.width, bullet.height, bullet.angle, white);
 	}
 
 	for (int n = 0; n < strlen("space invaders"); ++n)
@@ -276,6 +303,8 @@ void draw()
 void setup()
 {
 	std::string title = "space invaders";
+	gameState = GameState();
+	gameState.player = player();
 
 	// Loads symbols for Space Invaders title
 	for (int n = 0; n < title.length(); ++n)
@@ -286,20 +315,15 @@ void setup()
 		gameState.Text[n] = n != 5 ? LoadSprite(p) : 0;
 	}
 
-	gameState.player = player();
-	gameState.reload = 0;
-	gameState.enemyMoved = LoadSnd("sounds/fastinvader1.wav");
-	PlayMusic("sounds/music.mp3");
-
 	for (int n = 0; n < 50; ++n)
 	{
 		enemy e;
-		e.x = (n % 10) * 60 + 120;
-		e.y = (n / 10) * 60 + 70;
+		e.xcentre = (n % 10) * 60 + 120;
+		e.ycentre = (n / 10) * 60 + 70;
 		e.width = 10 + n % 17;
 		e.height = 10 + n % 17;
-		e.x2 = e.x + e.width;
-		e.y2 = e.y + e.height;
+		e.x2 = e.xcentre + e.width;
+		e.y2 = e.ycentre + e.height;
 		gameState.enemies.push_back(e);
 	}
 }
