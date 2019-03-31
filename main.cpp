@@ -13,57 +13,73 @@
 
 
 typedef void* sprite;
+typedef void* sound;
 
 struct enemy
 {
 	float x, y;
-	float xSize, ySize;
+	float width, height;
 	float xo, yo;
+	float x2, y2;
 	sprite sprite;
+	sound killed;
 
 	enemy()
 	{
-		x = y = xo = yo = xSize = ySize = 0;
+		x = y = xo = yo = width = height = 0;
 		sprite = LoadSprite("gfx/Little Invader.png");
+		killed = LoadSnd("sounds/invaderkilled.wav");
 	}
 };
 
 struct player
 {
-	float x, y, xSize, ySize;
+	float x, y, x2, y2, width, height;
 	sprite sprite;
+	sound shoot;
+	sound moved;
 
 	player() : x(400), y(550)
 	{
-		xSize = ySize = 50;
+		width = height = 50;
+		x2 = x + width;
+		y2 = y + height;
 		sprite = LoadSprite("gfx/Big Invader.png");
+		shoot = LoadSnd("sounds/shoot.wav");
 	}
 };
 
 
 struct bullet
 {
-	float x, y, a, xSize, ySize;
+	float x, y, x2, y2, a, width, height;
 	sprite sprite;
 
 	bullet(int x, int y) : x(x), y(y), a(0)
 	{
-		xSize = ySize = 10;
+		width = height = 10;
+		x2 = x + width;
+		y2 = y + height;
 		sprite = LoadSprite("gfx/bullet.png");
 	}
 };
 
 struct GameState
 {
-	enemy enemies[50];
+	std::vector<enemy> enemies;
 	std::vector<bullet> bullets;
 	player player;
-	int reload;
+	int reload{};
 	void* Text[14];
+	sound enemyMoved;
+	sound gameOver;
 
 	int time;
 
-	GameState() : Text{} { time = 0; }
+	GameState() : Text{}
+	{
+		time = reload = 0;
+	}
 };
 
 const DWORD white = 0xffffffff;
@@ -90,7 +106,7 @@ int myPow(int x, int p) {
 
 void updateEnemiesMovements()
 {
-	for (int n = 0; n < 50; ++n)
+	for (int n = 0; n < gameState.enemies.size(); ++n)
 	{
 		gameState.enemies[n].xo = gameState.enemies[n].yo = 0;
 		int n1 = gameState.time + myPow(n, 2) + myPow(n, 3);
@@ -99,11 +115,17 @@ void updateEnemiesMovements()
 		if ((n1 / 128) % 8 == 7)
 		{
 			gameState.enemies[n].xo += (1 - cos(n1 % 128 / 64.0f*2.f*PI))*(20 + myPow(n, 2) % 9);
-			gameState.enemies[n].yo += sin(n1 % 128 / 64.0f*2.f*PI)*(20 + myPow(n, 2) % 9);
+			gameState.enemies[n].xo += sin(n1 % 128 / 64.0f*2.f*PI)*(20 + myPow(n, 2) % 9);
 		}
 
 		if ((n2 / 256) % 16 == 15)
 			gameState.enemies[n].yo += (1 - cos(n2 % 256 / 256.0f*2.f*PI))*(150 + myPow(n, 2) % 9);
+
+		if (gameState.time > 600 && gameState.time % 600 < 50)
+		{
+			gameState.enemies[n].y += 1;
+			PlaySnd(gameState.enemyMoved);
+		}
 	}
 }
 
@@ -119,10 +141,16 @@ void updateBulletMovements()
 void updatePlayerMovements()
 {
 	if (IsKeyDown(VK_LEFT))
+	{
 		gameState.player.x -= 7;
+		gameState.player.x2 = gameState.player.x + gameState.player.width;
+	}
 
 	if (IsKeyDown(VK_RIGHT))
+	{
 		gameState.player.x += 7;
+		gameState.player.x2 = gameState.player.x + gameState.player.width;
+	}
 }
 
 void shoot()
@@ -133,30 +161,68 @@ void shoot()
 	if (IsKeyDown(VK_SPACE) && gameState.reload == 0)
 	{
 		gameState.bullets.emplace_back(gameState.player.x, gameState.player.y);
+		PlaySnd(gameState.player.shoot);
 		gameState.reload = 15;
 	}
 }
 
-void checkCollisions()
+bool valueInRange(float value, float min, float max)
 {
-	for (auto& enemy : gameState.enemies)
-	{
-		for (auto& bullet : gameState.bullets)
-		{
-
-		}
-	}
+	return (value >= min) && (value <= max);
 }
 
-void overlap()
+bool overlap(enemy e, bullet b)
 {
+	bool xOverlap = valueInRange(e.x + e.xo, b.x, b.x2) ||
+		valueInRange(b.x, e.x + e.xo, e.x2 + e.xo);
 
+	bool yOverlap = valueInRange(e.y + e.yo, b.y, b.y2) ||
+		valueInRange(b.y, e.y + e.yo, e.y2 + e.yo);
+
+	return xOverlap && yOverlap;
+}
+
+bool overlap(player p, enemy e)
+{
+	bool xOverlap = valueInRange(p.x, e.x + e.xo, e.x2 + e.xo) ||
+		valueInRange(e.x + e.xo, p.x, p.x2);
+
+	bool yOverlap = valueInRange(p.y, e.y + e.yo, e.y2 + e.yo) ||
+		valueInRange(e.y + e.yo, p.y, p.y2);
+
+	return xOverlap && yOverlap;
+}
+
+
+bool checkCollisions()
+{
+	for (int i = 0; i < gameState.enemies.size(); ++i)
+	{
+		if (overlap(gameState.player, gameState.enemies[i]))
+		{
+			int id = MessageBox(NULL, "Game Over", "Space Invaders", MB_OK);
+			if (id == 1)
+				return false;
+		}
+
+		for (int j = 0; j < gameState.bullets.size(); ++j)
+		{
+			if (overlap(gameState.enemies[i], gameState.bullets[j]))
+			{
+				PlaySnd(gameState.enemies[i].killed);
+				removeFrom(gameState.enemies, i);
+				removeFrom(gameState.bullets, j);
+				break;
+			}
+		}
+	}
+	return true;
 }
 
 /**
  * Updates all important states of the game like position of player, enemies, bullets and etc.
  */
-void update()
+bool update()
 {
 	++gameState.time;
 
@@ -164,6 +230,11 @@ void update()
 	updatePlayerMovements();
 	updateBulletMovements();
 	shoot();
+
+	if (gameState.enemies.empty())
+		return false;
+
+	return checkCollisions();
 }
 
 /**
@@ -172,22 +243,22 @@ void update()
 void draw()
 {
 	for (auto& enemy : gameState.enemies)
-	{		
-		DrawSprite(gameState.enemies->sprite, enemy.x + enemy.xo, enemy.y + enemy.yo,
-		           enemy.xSize, enemy.ySize, 0, white);
+	{
+		DrawSprite(enemy.sprite, enemy.x + enemy.xo, enemy.y + enemy.yo,
+			enemy.width, enemy.height, 0, white);
 	}
 
 	DrawSprite(gameState.player.sprite,
 		gameState.player.x,
 		gameState.player.y,
-		gameState.player.xSize,
-		gameState.player.ySize,
+		gameState.player.width,
+		gameState.player.height,
 		PI + sin(gameState.time*0.1)*0.1,
 		white);
 
 	for (auto& bullet : gameState.bullets)
 	{
-		DrawSprite(bullet.sprite, bullet.x, bullet.y, bullet.xSize, bullet.ySize, bullet.a, white);
+		DrawSprite(bullet.sprite, bullet.x, bullet.y, bullet.width, bullet.height, bullet.a, white);
 	}
 
 	for (int n = 0; n < strlen("space invaders"); ++n)
@@ -217,17 +288,21 @@ void setup()
 
 	gameState.player = player();
 	gameState.reload = 0;
+	gameState.enemyMoved = LoadSnd("sounds/fastinvader1.wav");
+	PlayMusic("sounds/music.mp3");
 
 	for (int n = 0; n < 50; ++n)
 	{
-		gameState.enemies[n] = enemy();
-		gameState.enemies[n].x = (n % 10) * 60 + 120;
-		gameState.enemies[n].y = (n / 10) * 60 + 70;
-		gameState.enemies[n].xSize = 10 + n % 17;
-		gameState.enemies[n].ySize = 10 + n % 17;
+		enemy e;
+		e.x = (n % 10) * 60 + 120;
+		e.y = (n / 10) * 60 + 70;
+		e.width = 10 + n % 17;
+		e.height = 10 + n % 17;
+		e.x2 = e.x + e.width;
+		e.y2 = e.y + e.height;
+		gameState.enemies.push_back(e);
 	}
 }
-
 
 void Game()
 {
@@ -235,7 +310,8 @@ void Game()
 
 	while (!WantQuit() && !IsKeyDown(VK_ESCAPE))
 	{
-		update();
+		if (!update())
+			break;
 		draw();
 	}
 }
