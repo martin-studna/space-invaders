@@ -1,6 +1,5 @@
 #include "lib/leetlib.h"
 #include <vector>
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -21,23 +20,19 @@ enum mode { Play, Score };
 
 typedef void* sprite;
 typedef void* sound;
-
-mode _mode;
+const DWORD white = 0xffffffff;
 
 struct enemy
 {
 	float xcentre, ycentre;
 	float width, height;
 	float xo, yo;
-	float x2, y2;
 	sprite sprite;
 	sound killed;
 	RECT rect;
 
 	enemy()
 	{
-		PWINDOWINFO info;
-
 		xcentre = ycentre = xo = yo = width = height = 0;
 		rect = { 0,0,0,0 };
 		sprite = LoadSprite("gfx/Little Invader.png");
@@ -47,7 +42,7 @@ struct enemy
 
 struct player
 {
-	float xcentre, ycentre, x2, y2, width, height;
+	float xcentre, ycentre, width, height;
 	float angle;
 	int score;
 	sprite sprite;
@@ -58,9 +53,10 @@ struct player
 	player() : xcentre(400), ycentre(550)
 	{
 		score = 0;
+		angle = 0.f;
+		sprite = shoot = moved = nullptr;
+		rect = RECT();
 		width = height = 50;
-		x2 = xcentre + width;
-		y2 = ycentre + height;
 		sprite = LoadSprite("gfx/Big Invader.png");
 		shoot = LoadSnd("sounds/shoot.wav");
 	}
@@ -68,15 +64,14 @@ struct player
 
 struct bullet
 {
-	float xcentre, ycentre, x2, y2, angle, width, height;
+	float xcentre, ycentre, angle, width, height;
 	sprite sprite;
 	RECT rect;
 
 	bullet(const int xcentre, const int ycentre) : xcentre(xcentre), ycentre(ycentre), angle(0)
 	{
 		width = height = 10;
-		x2 = xcentre + width;
-		y2 = ycentre + height;
+		rect = RECT();
 		sprite = LoadSprite("gfx/bullet.png");
 	}
 };
@@ -86,19 +81,22 @@ struct GameState
 	std::vector<enemy> enemies;
 	std::vector<bullet> bullets;
 	std::string results;
+	mode mode;
 	bool read;
 	player player;
 	int reload;
-	void* Text[14];
+	void* Text[14]{};
 	sound enemyMoved;
 	sound gameOver;
-	RECT windowRect;
+	RECT windowRect{};
 	std::chrono::steady_clock::time_point start;
 
 	int time;
 
-	GameState() : Text{}
+	GameState() 
 	{
+		mode = Play;
+		start = std::chrono::steady_clock::now();
 		results = "";
 		read = false;
 		time = reload = 0;
@@ -110,7 +108,13 @@ struct GameState
 	}
 };
 
-const DWORD white = 0xffffffff;
+struct score
+{
+	int kills;
+	int time;
+
+	score(int kills, int time) : kills(kills), time(time) {}
+};
 
 GameState gameState;
 
@@ -153,20 +157,20 @@ void updateEnemiesMovements()
 {
 	for (int n = 0; n < gameState.enemies.size(); ++n)
 	{
-		gameState.enemies[n].xo = gameState.enemies[n].yo = 0;
+		gameState.enemies[n].xo = 0, gameState.enemies[n].yo = 0;
 		int n1 = gameState.time + myPow(n, 2) + myPow(n, 3);
 		int n2 = gameState.time + n + myPow(n, 2) + myPow(n, 3) * 3;
 
-		if ((n1 / 128) % 8 == 7)
+		if (((n1 >> 6) & 7) == 7)
 		{
-			gameState.enemies[n].xo += (1 - cos(n1 % 128 / 64.0f*2.f*PI))*(20 + myPow(n, 2) % 9);
-			gameState.enemies[n].xo += sin(n1 % 128 / 64.0f*2.f*PI)*(20 + myPow(n, 2) % 9);
+			gameState.enemies[n].xo += (1 - cos((n1 & 127) / 64.0f*2.f*PI))*(20 + (myPow(n, 2) % 9));
+			gameState.enemies[n].yo += (sin((n1 & 127) / 64.0f*2.f*PI))*(20 + (myPow(n, 2) % 9));
 		}
 
-		if ((n2 / 256) % 16 == 15)
-			gameState.enemies[n].yo += (1 - cos(n2 % 256 / 256.0f*2.f*PI))*(150 + myPow(n, 2) % 9);
+		if (((n2 >> 8) & 15) == 15)
+			gameState.enemies[n].yo += (1 - cos((n2 & 255) / 256.0f*2.f*PI))*(150 + (myPow(n, 2) % 9));
 
-		if (gameState.time > 600 && gameState.time % 600 < 50)
+		if (gameState.time > 400 && gameState.time % 400 < 50)
 		{
 			gameState.enemies[n].ycentre += 1;
 			PlaySnd(gameState.enemyMoved);
@@ -194,8 +198,6 @@ void updateBulletMovements()
 			bullet.width,
 			bullet.height,
 			0);
-
-		int i = 0;
 	}
 }
 
@@ -219,7 +221,6 @@ void updatePlayerMovements()
 		gameState.player.width,
 		gameState.player.height,
 		0);
-
 }
 
 void shoot()
@@ -243,14 +244,6 @@ void writeScore()
 	outfile.close();
 }
 
-struct score
-{
-	int kills;
-	int time;
-
-	score(int kills, int time) : kills(kills), time(time) {}
-};
-
 std::vector<score> scores;
 
 struct comparator
@@ -259,10 +252,10 @@ struct comparator
 	{
 		if (struct1.kills > struct2.kills)
 			return true;
-		else if (struct1.kills == struct2.kills)
-		{
-			return struct1.time > struct2.time;
-		}
+
+		if (struct1.kills == struct2.kills)
+			return struct1.time < struct2.time;
+
 		return false;
 	}
 };
@@ -291,7 +284,6 @@ std::string readScore()
 		if (tokens.size() == 5)
 			scores.emplace_back(std::stoi(tokens[2]), std::stoi(tokens[4]));
 
-
 		tokens.clear();
 	}
 	infile.close();
@@ -313,20 +305,20 @@ std::string readScore()
 	outfile.close();
 
 	return results;
-
 }
 
 
 void checkCollisions()
 {
+	RECT inter;
+
 	for (int i = 0; i < gameState.enemies.size(); ++i)
 	{
-		RECT inter;
 		if (IntersectRect(&inter, &gameState.enemies[i].rect, &gameState.player.rect))
 		{
 			StopMusic();
 			PlaySnd(gameState.gameOver);
-			_mode = mode::Score;
+			gameState.mode = mode::Score;
 			writeScore();
 			break;
 		}
@@ -361,7 +353,7 @@ void update()
 	if (gameState.enemies.empty())
 	{
 		writeScore();
-		_mode = mode::Score;
+		gameState.mode = mode::Score;
 	}
 }
 
@@ -420,8 +412,8 @@ void setup()
 {
 	std::string title = "space invaders";
 	gameState = GameState();
-	gameState.start = std::chrono::steady_clock::now();
 	gameState.player = player();
+
 
 	// Loads symbols for Space Invaders title
 	for (int n = 0; n < title.length(); ++n)
@@ -439,8 +431,6 @@ void setup()
 		e.ycentre = (n / 10) * 60 + 70;
 		e.width = 10 + n % 17;
 		e.height = 10 + n % 17;
-		e.x2 = e.xcentre + e.width;
-		e.y2 = e.ycentre + e.height;
 		gameState.enemies.push_back(e);
 	}
 }
@@ -449,19 +439,17 @@ void Game()
 {
 	setup();
 
-	_mode = mode::Play;
-
 	while (!WantQuit() && !IsKeyDown(VK_ESCAPE))
 	{
-		switch (_mode)
+		switch (gameState.mode)
 		{
-			case mode::Play:
+			case Play:
 			{
 				update();
 				draw();
 				break;
 			}
-			case mode::Score:
+			case Score:
 				drawScore();
 				break;
 		}

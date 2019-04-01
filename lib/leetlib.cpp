@@ -57,14 +57,14 @@ struct CUSTOMVERTEX
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 std::map<int, LPD3DXFONT> fonts;
-int lasttextwidth, lasttextheight;
-int intextbatch = 0;
+int lasttextwidth,lasttextheight;
+int intextbatch=0;
 LPD3DXSPRITE fontsprite;
 #define MA_RELEASE(x) {int c=0;if (x) c=(x)->Release();x=NULL;}
 void ReleaseFonts();
 typedef unsigned int u32;
 
-void StartTextBatch(int size = 0);
+void StartTextBatch(int size=0);
 //int DrawText(int x, int y, int size, u32 col, bool cenetered, const char *pFormat, ...);
 
 
@@ -72,15 +72,15 @@ void EndTextBatch();
 
 LPD3DXFONT FindFont(int size)
 {
-	std::map<int, LPD3DXFONT>::iterator fit = fonts.find(size);
-	if (fit == fonts.end())
+	std::map<int, LPD3DXFONT>::iterator fit=fonts.find(size);
+	if (fit==fonts.end())
 	{
-		LPD3DXFONT m_pFont = NULL;
-		D3DXCreateFont(g_pd3dDevice, size, 0, FW_NORMAL, 0, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Lucida Console"), &m_pFont);
-		fit = fonts.insert(std::pair<int, LPD3DXFONT>(size, m_pFont)).first;
+		LPD3DXFONT m_pFont=NULL;
+		D3DXCreateFont(g_pd3dDevice,size,0,FW_NORMAL,0,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Lucida Console"), &m_pFont );
+		fit=fonts.insert(std::pair<int,LPD3DXFONT>(size,m_pFont)).first;
 		//if (intextbatch) fit->second->Begin();
 	}
-	if (fit != fonts.end())
+	if (fit!=fonts.end())
 	{
 		return fit->second;
 	}
@@ -90,27 +90,27 @@ LPD3DXFONT FindFont(int size)
 void ReleaseFonts()
 {
 	if (intextbatch) EndTextBatch();
-	for (std::map<int, LPD3DXFONT>::iterator it = fonts.begin(); it != fonts.end(); ++it)
+	for (std::map<int, LPD3DXFONT>::iterator it=fonts.begin();it!=fonts.end();++it)
 	{
 		MA_RELEASE(it->second);
 	}
 	fonts.clear();
 	MA_RELEASE(fontsprite);
-	intextbatch = 0;
+	intextbatch=0;
 }
 
 void StartTextBatch(int size)
 {
 	if (intextbatch) EndTextBatch();
-	intextbatch = 1;
+	intextbatch=1;
 	if (size) FindFont(size);
 	if (!fontsprite)
 	{
-		D3DXCreateSprite(g_pd3dDevice, &fontsprite);
+		D3DXCreateSprite( g_pd3dDevice, &fontsprite);
 	}
 	if (fontsprite)
 	{
-		fontsprite->Begin(D3DXSPRITE_ALPHABLEND | D3DXSPRITE_SORT_TEXTURE);
+		fontsprite->Begin( D3DXSPRITE_ALPHABLEND | D3DXSPRITE_SORT_TEXTURE );
 	}
 	//for (std::map<int, LPD3DXFONT>::iterator fit=fonts.begin();fit!=fonts.end();++fit) fit->second->Begin();
 
@@ -121,12 +121,12 @@ void EndTextBatch()
 {
 	if (intextbatch)
 	{
-		intextbatch = 0;
+		intextbatch=0;
 		if (fontsprite)
 		{
 			fontsprite->End();
 		}
-		//for (std::map<int, LPD3DXFONT>::iterator fit=fonts.begin();fit!=fonts.end();++fit) fit->second->End();		
+		//for (std::map<int, LPD3DXFONT>::iterator fit=fonts.begin();fit!=fonts.end();++fit) fit->second->End();
 	}
 }
 
@@ -136,20 +136,20 @@ int DrawSomeText(int x, int y, int size, int col, bool centered, const char *pFo
 {
 	char debugText[8192];
 	va_list	parameter;
-	va_start(parameter, pFormat);
-	vsprintf(debugText, pFormat, parameter);
+	va_start(parameter,pFormat);
+	vsprintf(debugText,pFormat,parameter);
 
-	LPD3DXFONT m_pFont = FindFont(size);
+	LPD3DXFONT m_pFont=FindFont(size);
 	if (!m_pFont) return 0;
-	RECT r = { x,y,x + 100,y + 100 };
+	RECT r={x,y,x+100,y+100};
 
-	m_pFont->DrawText(intextbatch ? fontsprite : NULL, debugText, -1, &r, DT_CALCRECT, 0);
-	int wid = r.right - r.left;
-	if (centered) r.left -= wid / 2;
-	if (centered) r.right -= wid / 2;
-	m_pFont->DrawText(intextbatch ? fontsprite : NULL, debugText, -1, &r, DT_TOP | DT_LEFT, col);
-	lasttextheight = r.bottom - r.top;
-	lasttextwidth = r.right - r.left;
+	m_pFont->DrawText(intextbatch?fontsprite:NULL,debugText,-1,&r,DT_CALCRECT,0);
+	int wid=r.right-r.left;
+	if (centered) r.left-=wid/2;
+	if (centered) r.right-=wid/2;
+	m_pFont->DrawText(intextbatch?fontsprite:NULL,debugText,-1,&r,DT_TOP|DT_LEFT,col);
+	lasttextheight=r.bottom-r.top;
+	lasttextwidth=r.right-r.left;
 	return lasttextheight;
 
 
@@ -259,22 +259,22 @@ VOID Cleanup()
 // Desc: Draws the scene
 //-----------------------------------------------------------------------------
 
-
+/*
 float RotateU(float u, float v, float a)
 {
-	u = u - 0.5;
-	v = v - 0.5;
-	return u * cos(a) - v * sin(a) + 0.5;
+	u=u-0.5;
+	v=v-0.5;
+	return u*cos(a)-v*sin(a)+0.5;
 }
 
 float RotateV(float u, float v, float a)
 {
-	u = u - 0.5;
-	v = v - 0.5;
-	return u * sin(a) + v * cos(a) + 0.5;
+	u=u-0.5;
+	v=v-0.5;
+	return u*sin(a)+v*cos(a)+0.5;
 }
 
-void DrawQuad(float x1, float y1, float x2, float y2, DWORD col = 0xffffffff, float a = 0)
+void DrawQuad(float x1, float y1, float x2, float y2, DWORD col=0xffffffff, float a=0)
 {
 
 	CUSTOMVERTEX tea2[] =
@@ -286,16 +286,16 @@ void DrawQuad(float x1, float y1, float x2, float y2, DWORD col = 0xffffffff, fl
 	};
 
 	VOID* ptea2;
-	if (FAILED(g_pVB->Lock(0, sizeof(tea2), (void**)&ptea2, D3DLOCK_DISCARD)))
-		return;
-	memcpy(ptea2, tea2, sizeof(tea2));
+	if( FAILED( g_pVB->Lock( 0, sizeof(tea2), (void**)&ptea2, D3DLOCK_DISCARD ) ) )
+		return ;
+	memcpy( ptea2, tea2, sizeof(tea2) );
 	g_pVB->Unlock();
 
 
-	g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
+	g_pd3dDevice->DrawPrimitive( D3DPT_TRIANGLESTRIP, 0, 2 );
 }
 
-void DrawTri(float x1, float y1, float x2, float y2, float x3, float y3, DWORD col = 0xffffffff)
+void DrawTri(float x1, float y1, float x2, float y2, float x3, float y3, DWORD col=0xffffffff)
 {
 	//OutputDebugString("triangle!");
 
@@ -307,17 +307,17 @@ void DrawTri(float x1, float y1, float x2, float y2, float x3, float y3, DWORD c
 		{ x3, y3, 0.5f, 1.0f, col, 0,0},
 	};
 
-	VOID* ptea2 = NULL;
-	if (FAILED(g_pVB->Lock(0, sizeof(tea2), (void**)&ptea2, D3DLOCK_DISCARD)))
+	VOID* ptea2=NULL;
+	if( FAILED( g_pVB->Lock( 0, sizeof(tea2), (void**)&ptea2, D3DLOCK_DISCARD ) ) )
 	{
 		OutputDebugString("lock failed");
-		return;
+		return ;
 	}
-	memcpy(ptea2, tea2, sizeof(tea2));
+	memcpy( ptea2, tea2, sizeof(tea2) );
 	g_pVB->Unlock();
 
 
-	if (FAILED(g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 1)))
+	if (FAILED(g_pd3dDevice->DrawPrimitive( D3DPT_TRIANGLESTRIP, 0, 1 )))
 	{
 		OutputDebugString("draw failed");
 	}
@@ -752,7 +752,7 @@ void SetCurrentTexture(void *tex)
 }
 
 
-void DrawRectangle(float x1, float y1, float x2, float y2, DWORD col)
+void DrawRectangle(float x1, float y1, float x2, float y2, DWORD col )
 {
 	CUSTOMVERTEX tea2[] =
 	{
@@ -786,7 +786,7 @@ void DrawSprite(void *sprite, float xcentre, float ycentre, float xsize, float y
 
 
 // 'flat colour' output
-void DrawLine(float x1, float y1, float x2, float y2, DWORD col) // no texture
+void DrawLine(float x1, float y1, float x2, float y2, DWORD col ) // no texture
 {
 	IDirect3DBaseTexture9 *oldtex = NULL;
 	g_pd3dDevice->GetTexture(0, &oldtex);
@@ -801,7 +801,7 @@ void DrawLine(float x1, float y1, float x2, float y2, DWORD col) // no texture
 	g_pd3dDevice->SetTexture(0, oldtex);
 }
 
-void DrawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, DWORD col) // flat colored tri, no texture
+void DrawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, DWORD col ) // flat colored tri, no texture
 {
 	IDirect3DBaseTexture9 *oldtex = NULL;
 	g_pd3dDevice->GetTexture(0, &oldtex);
@@ -817,7 +817,7 @@ void DrawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, DW
 	g_pd3dDevice->SetTexture(0, oldtex);
 }
 
-/*
+
 // 'advanced' output - for geeks only - for drawing arbitrarily textured triangles and line lists
 void DrawTriangleList(Vertex *verts, int numtris)
 {
@@ -856,7 +856,7 @@ void DrawLineList(Vertex *verts, int numlines)
 	}
 	g_pd3dDevice->DrawPrimitiveUP(D3DPT_LINELIST, numlines, vs, sizeof(CUSTOMVERTEX));
 }
-*/
+
 
 FSOUND_STREAM *music;
 
