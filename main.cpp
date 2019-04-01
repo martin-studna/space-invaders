@@ -5,6 +5,9 @@
 #include <sstream>
 #include <string>
 #include <d3dx9core.h>
+#include <map>
+#include <algorithm>
+#include <chrono>
 
 /**
 		main.cpp
@@ -15,7 +18,6 @@
 */
 
 enum mode { Play, Score };
-
 
 typedef void* sprite;
 typedef void* sound;
@@ -34,6 +36,8 @@ struct enemy
 
 	enemy()
 	{
+		PWINDOWINFO info;
+
 		xcentre = ycentre = xo = yo = width = height = 0;
 		rect = { 0,0,0,0 };
 		sprite = LoadSprite("gfx/Little Invader.png");
@@ -87,6 +91,7 @@ struct GameState
 	sound enemyMoved;
 	sound gameOver;
 	RECT windowRect;
+	std::chrono::steady_clock::time_point start;
 
 	int time;
 
@@ -228,26 +233,79 @@ void shoot()
 
 void writeScore()
 {
+	std::chrono::duration<double> elapsed = std::chrono::duration_cast<std::chrono::seconds> (std::chrono::steady_clock::now() - gameState.start);
 	std::ofstream outfile("score.txt", std::ios_base::app | std::ios_base::out);
-	outfile << "Killed aliens: " << gameState.player.score << " time: " << gameState.time << std::endl;
+	outfile << "Killed aliens: " << gameState.player.score << " time: " << elapsed.count() << " s" << std::endl;
 	outfile.close();
 }
+
+struct score
+{
+	int kills;
+	int time;
+
+	score(int kills, int time) : kills(kills), time(time) {}
+};
+
+std::vector<score> scores;
+
+struct comparator
+{
+	bool operator() (const score& struct1, const score& struct2) const
+	{
+		if (struct1.kills > struct2.kills)
+			return true;
+		else if (struct1.kills == struct2.kills)
+		{
+			return struct1.time > struct2.time;
+		}
+		return false;
+	}
+};
 
 std::string readScore()
 {
 	std::ifstream infile;
 	infile.open("score.txt"); //open the input file
+	std::string line;
+	std::string kills;
+	std::string time;
+	std::string garb;
 
-	std::stringstream strStream;
-	strStream << infile.rdbuf(); //read the file
-	std::string str = strStream.str();
+
+	while (std::getline(infile, line))
+	{
+		std::stringstream strStream(line);
+		strStream >> garb;
+		strStream >> garb;
+		strStream >> kills;
+		strStream >> garb;
+		strStream >> time;
+		scores.emplace_back(std::stoi(kills), std::stoi(time));
+	}
+	std::sort(scores.begin(), scores.end(), comparator());
+
+	std::string results;
+
+	for (int i = 0; i < 10; ++i)
+	{
+		if (scores.size() == i)
+			break;
+
+		results += "Killed aliens: " + std::to_string(scores[i].kills) + " Time: " + std::to_string(scores[i].time) + " s\n";
+	}
 	infile.close();
 
-	return str;
+	std::ofstream outfile("score.txt");
+	outfile << results;
+	outfile.close();
+
+	return results;
+
 }
 
 
-bool checkCollisions()
+void checkCollisions()
 {
 	for (int i = 0; i < gameState.enemies.size(); ++i)
 	{
@@ -256,13 +314,9 @@ bool checkCollisions()
 		{
 			StopMusic();
 			PlaySnd(gameState.gameOver);
-			int id = MessageBox(nullptr, "Game Over", "Space Invaders", MB_OK);
-
+			_mode = mode::Score;
 			writeScore();
-
-			MessageBox(nullptr, readScore().c_str(), "Score", MB_OK);
-
-			return false;
+			break;
 		}
 
 		for (int j = 0; j < gameState.bullets.size(); ++j)
@@ -277,13 +331,12 @@ bool checkCollisions()
 			}
 		}
 	}
-	return true;
 }
 
 /**
  * Updates all important states of the game like position of player, enemies, bullets and etc.
  */
-bool update()
+void update()
 {
 	++gameState.time;
 
@@ -291,21 +344,15 @@ bool update()
 	updatePlayerMovements();
 	updateBulletMovements();
 	shoot();
+	checkCollisions();
 
 	if (gameState.enemies.empty())
 	{
-		MessageBox(nullptr, "You saved the humanity against the alien invasion!", "Space Invaders", MB_OK);
-
 		writeScore();
-		
-
-		MessageBox(nullptr, readScore().c_str(), "Score", MB_OK);
-
-		return false;
+		_mode = mode::Score;
 	}
 
-
-	return checkCollisions();
+	
 }
 
 /**
@@ -338,8 +385,19 @@ void draw()
 			DrawSprite(gameState.Text[n], n * 40 + 150, 30, 20, 20, sin(gameState.time*0.1)*n*0.01);
 	}
 
+
 	Flip();
 }
+
+void drawScore()
+{
+	std::string results = readScore();
+	DrawSomeText(100, 100, 40, white, false, "Score:");
+	DrawSomeText(100, 150, 30, white, false, results.c_str());
+	DrawSomeText(100, 480, 30, white, false, "Press Esc to close window.");
+	Flip();
+}
+
 
 /**
  * Initializes all important resources to start the game.
@@ -348,6 +406,7 @@ void setup()
 {
 	std::string title = "space invaders";
 	gameState = GameState();
+	gameState.start = std::chrono::steady_clock::now();
 	gameState.player = player();
 
 	// Loads symbols for Space Invaders title
@@ -376,10 +435,22 @@ void Game()
 {
 	setup();
 
+	_mode = mode::Play;
+
 	while (!WantQuit() && !IsKeyDown(VK_ESCAPE))
 	{
-		if (!update())
-			break;
-		draw();
+		switch (_mode)
+		{
+			case mode::Play:
+			{
+				update();
+				draw();
+				break;
+			}
+			case mode::Score:
+				drawScore();
+				break;
+		}
+
 	}
 }
