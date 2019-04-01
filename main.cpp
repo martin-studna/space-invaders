@@ -85,6 +85,8 @@ struct GameState
 {
 	std::vector<enemy> enemies;
 	std::vector<bullet> bullets;
+	std::string results;
+	bool read;
 	player player;
 	int reload;
 	void* Text[14];
@@ -97,6 +99,8 @@ struct GameState
 
 	GameState() : Text{}
 	{
+		results = "";
+		read = false;
 		time = reload = 0;
 		GetWindowRect(GetActiveWindow(), &windowRect);
 		gameOver = LoadSnd("sounds/over.wav");
@@ -268,33 +272,41 @@ std::string readScore()
 	std::ifstream infile;
 	infile.open("score.txt"); //open the input file
 	std::string line;
-	std::string kills;
-	std::string time;
-	std::string garb;
-
+	std::vector<std::string> tokens;
 
 	while (std::getline(infile, line))
 	{
 		std::stringstream strStream(line);
-		strStream >> garb;
-		strStream >> garb;
-		strStream >> kills;
-		strStream >> garb;
-		strStream >> time;
-		scores.emplace_back(std::stoi(kills), std::stoi(time));
+		std::string token;
+
+		for (int i = 0; i < 5; ++i)
+		{
+			if (strStream.good())
+			{
+				strStream >> token;
+				tokens.push_back(token);
+			}
+		}
+
+		if (tokens.size() == 5)
+			scores.emplace_back(std::stoi(tokens[2]), std::stoi(tokens[4]));
+
+
+		tokens.clear();
 	}
+	infile.close();
+
 	std::sort(scores.begin(), scores.end(), comparator());
 
 	std::string results;
 
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < scores.size(); ++i)
 	{
-		if (scores.size() == i)
+		if (i == 10)
 			break;
 
 		results += "Killed aliens: " + std::to_string(scores[i].kills) + " Time: " + std::to_string(scores[i].time) + " s\n";
 	}
-	infile.close();
 
 	std::ofstream outfile("score.txt");
 	outfile << results;
@@ -351,8 +363,6 @@ void update()
 		writeScore();
 		_mode = mode::Score;
 	}
-
-	
 }
 
 /**
@@ -385,15 +395,19 @@ void draw()
 			DrawSprite(gameState.Text[n], n * 40 + 150, 30, 20, 20, sin(gameState.time*0.1)*n*0.01);
 	}
 
-
 	Flip();
 }
 
 void drawScore()
 {
-	std::string results = readScore();
+	if (!gameState.read)
+	{
+		gameState.results = readScore();
+		gameState.read = true;
+	}
+
 	DrawSomeText(100, 100, 40, white, false, "Score:");
-	DrawSomeText(100, 150, 30, white, false, results.c_str());
+	DrawSomeText(100, 150, 30, white, false, gameState.results.c_str());
 	DrawSomeText(100, 480, 30, white, false, "Press Esc to close window.");
 	Flip();
 }
@@ -451,6 +465,5 @@ void Game()
 				drawScore();
 				break;
 		}
-
 	}
 }
